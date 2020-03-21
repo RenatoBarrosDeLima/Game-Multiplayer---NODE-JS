@@ -10,18 +10,24 @@ const sockets = socketio(server)
 app.use(express.static('public'))
 
 const game = createGame()
-game.addPlayer({ playerId: 'player1', playerX: 0, playerY: 0 })
-game.addPlayer({ playerId: 'player2', playerX: 7, playerY: 0 })
-game.addPlayer({ playerId: 'player3', playerX: 9, playerY: 0 })
-game.addFruit({ fruitId: "Maça", fruitX: 3, fruitY: 3 })
-game.addFruit({ fruitId: "Banana", fruitX: 3, fruitY: 5 })
 
-
-console.log(game.state)
+game.subscribe((command) => {
+    console.log(`> Emitting ${command.type}`)
+    sockets.emit(command.type, command)
+})
 
 sockets.on('connection', (socket) => {
     const playerId = socket.id
     console.log(`> Player connected on Server with id: ${playerId}`)
+
+    game.addPlayer({playerId: playerId})
+
+    socket.emit('setup', game.state)
+
+    socket.on('disconnect', () => {
+        game.removePlayer({ playerId: playerId })
+        console.log(`> Player disconnected: ${playerId}`)
+    })
 })
 
 server.listen(3000, () => {
